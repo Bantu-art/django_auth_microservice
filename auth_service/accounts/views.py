@@ -15,3 +15,28 @@ class RegisterView(generics.CreateAPIView):
 
         user = User.objects.create_user(email=email, phone=phone, password=password)
         return Response({'message': 'User registered'}, status=201)
+
+class LoginView(generics.GenericAPIView):
+    def post(self, request):
+        email = request.data.get('email')
+        phone = request.data.get('phone')
+        password = request.data.get('password')
+
+        # You can authenticate with either
+        user = None
+        if email:
+            user = authenticate(request, email=email, password=password)
+        elif phone:
+            try:
+                user_obj = User.objects.get(phone=phone)
+                user = authenticate(request, email=user_obj.email, password=password)
+            except User.DoesNotExist:
+                pass
+
+        if user:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            })
+        return Response({'error': 'Invalid credentials'}, status=401)
